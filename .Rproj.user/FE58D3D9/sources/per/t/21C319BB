@@ -1,0 +1,26 @@
+{
+    "id": "21C319BB",
+    "path": "D:/ElvisData/Bigdata/TP-ERP-ODBC20210709.R",
+    "project_path": null,
+    "type": "r_source",
+    "hash": "3540928301",
+    "contents": "",
+    "dirty": false,
+    "created": 1625797173272.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "13,17",
+        "scrollLine": "13"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1626162422,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1626162422713,
+    "read_only": false,
+    "read_only_alternatives": []
+}

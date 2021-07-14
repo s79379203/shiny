@@ -1,0 +1,260 @@
+---
+title: "FWT input and output reports"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+
+```
+
+
+```{r data}
+
+#data <- read.csv("C:/Users/elvis/Documents/fwt_reports/BankChurners.csv")
+
+#Categorical.Variables = c("Gender", "Education_Level", "Marital_Status")
+
+#Numeric.Variables = c("Customer_Age", "Total_Trans_Ct", "Credit_Limit")
+
+load("C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+
+```
+
+
+
+1-6月Output
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### 累計出貨金額 (1至6月, 單位萬元) {.value-box}
+```{r}
+valueBox(totaloutput <- round(sum(sqlResultall$samt) / 10000))
+```
+
+### 平均每月出貨金額 (單位:萬元)
+```{r}
+valueBox(round(totaloutput/6))
+```
+
+Row
+-----------------------------------------------------------------------
+### NKG集團總出貨金額 (單位:萬元)  {.value-box}
+```{r}
+#ClientNo=="04370927"
+#ClientNo=="27580987-1"
+#ClientNo=="27580987-4"
+#ClientNo=="27580987-5"
+nkg_all <- subset(sqlResultall,ClientNo=="04370927" |
+                    ClientNo=="27580987-1" |
+                    ClientNo=="27580987-4" |
+                    ClientNo=="27580987-5")
+valueBox(nkgoutput <- round(sum(nkg_all$samt) / 10000))
+```
+
+### CAL-COMP出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1"
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allC <- subset(sqlResultall,ClientNo=="27580987-1")
+valueBox(nkgoutputC <- round(sum(nkg_allC$samt) / 10000))
+```
+
+### 泰金寶(巴西)出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1"
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allD <- subset(sqlResultall,ClientNo=="27580987-5")
+valueBox(nkgoutputD <- round(sum(nkg_allD$samt) / 10000))
+```
+
+### 金寶電子出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allB <- subset(sqlResultall,ClientNo=="04370927")
+valueBox(nkgoutputB <- round(sum(nkg_allB$samt) / 10000))
+```
+
+
+### 泰金寶(岳陽)出貨金額 
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#27580987-5 泰金寶(巴西)
+#ClientNo=="27580987-1
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"
+#ClientNo==27580987-5
+nkg_allA <- subset(sqlResultall,ClientNo=="27580987-4")
+valueBox(nkgoutputA <- round(sum(nkg_allA$samt) / 10000))
+```
+
+
+Row
+-----------------------------------------------------------------------
+### Output by Sales
+```{r}
+require(plyr)
+Shipbycust <- subset(sqlResultall, select= c(salesman,client,shipdate,samt))
+Shipbycust <- ddply(Shipbycust,.(salesman),summarise,
+                    Total = round(sum(samt)/10000), AVG= round(Total/6))
+datatable(Shipbycust)
+```
+
+
+7月Output
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### 累計出貨金額 (7/13日更新, 單位萬元) {.value-box}
+```{r}
+valueBox(totaloutput7 <- round(sum(sqlResultall7$samt) / 10000))
+```
+
+### 平均每月出貨金額 (單位:萬元)
+```{r}
+valueBox(round(totaloutput7/6))
+```
+
+Row
+-----------------------------------------------------------------------
+### NKG集團總出貨金額 (單位:萬元)  {.value-box}
+```{r}
+#ClientNo=="04370927"
+#ClientNo=="27580987-1"
+#ClientNo=="27580987-4"
+#ClientNo=="27580987-5"
+nkg_all <- subset(sqlResultall7,ClientNo=="04370927" |
+                    ClientNo=="27580987-1" |
+                    ClientNo=="27580987-4" |
+                    ClientNo=="27580987-5")
+valueBox(nkgoutput <- round(sum(nkg_all$samt) / 10000))
+```
+
+### CAL-COMP出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1"
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allC <- subset(sqlResultall7,ClientNo=="27580987-1")
+valueBox(nkgoutputC <- round(sum(nkg_allC$samt) / 10000))
+```
+
+### 泰金寶(巴西)出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1"
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allD <- subset(sqlResultall7,ClientNo=="27580987-5")
+valueBox(nkgoutputD <- round(sum(nkg_allD$samt) / 10000))
+```
+
+### 金寶電子出貨金額 (單位:萬元)
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#ClientNo=="27580987-1
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"|
+nkg_allB <- subset(sqlResultall7,ClientNo=="04370927")
+valueBox(nkgoutputB <- round(sum(nkg_allB$samt) / 10000))
+```
+
+
+### 泰金寶(岳陽)出貨金額 
+```{r}
+#27580987-1 CAL-COMP
+#04370927 金寶電子
+#27580987-4 泰金寶光電(岳陽)
+#27580987-5 泰金寶(巴西)
+#ClientNo=="27580987-1
+#ClientNo=="04370927" 
+#ClientNo=="27580987-4"
+#ClientNo==27580987-5
+nkg_allA <- subset(sqlResultall7,ClientNo=="27580987-4")
+valueBox(nkgoutputA <- round(sum(nkg_allA$samt) / 10000))
+```
+
+
+Row
+-----------------------------------------------------------------------
+### Output by Sales
+```{r}
+require(plyr)
+Shipbycust <- subset(sqlResultall7, select= c(salesman,client,shipdate,samt))
+Shipbycust <- ddply(Shipbycust,.(salesman),summarise,
+                    Total = round(sum(samt)/10000))
+datatable(Shipbycust)
+```
+
+### Output by Customers
+```{r}
+require(plyr)
+Shipbycust <- subset(sqlResultall7, select= c(salesman,client,shipdate,samt))
+ShipbycustB <- ddply(Shipbycust,.(salesman, client),summarise,
+                    Total = round(sum(samt)/10000))
+datatable(ShipbycustB)
+```
+
+Others
+=======================================================================
+
+Column {.sidebar data-width=200}
+-----------------------------------------------------------------------
+
+```{r}
+
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+

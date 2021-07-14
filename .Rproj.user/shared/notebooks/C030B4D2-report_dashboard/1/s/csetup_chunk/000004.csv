@@ -1,0 +1,29 @@
+"0","library(flexdashboard)"
+"0","library(DT)"
+"0","library(plotly)"
+"0","library(ggplot2)"
+"0","library(shiny)"
+"2","
+載入套件：‘shiny’
+
+"
+"2","下列物件被遮斷自 ‘package:DT’:
+
+    dataTableOutput, renderDataTable
+
+"
+"0","library(dplyr)"
+"2","
+載入套件：‘dplyr’
+
+"
+"2","下列物件被遮斷自 ‘package:stats’:
+
+    filter, lag
+
+"
+"2","下列物件被遮斷自 ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"

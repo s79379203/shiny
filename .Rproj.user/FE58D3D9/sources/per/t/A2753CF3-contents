@@ -1,0 +1,258 @@
+
+#查詢已在記憶體中的packages
+search()
+
+#install.packages("dplyr")
+#install.packages("sqldf")
+install.packages("RODBC")
+install.packages("plyr")
+
+library("sqldf")
+setwd("D:/Bigdata")
+fwtemp <- read.csv(file="CRM-Employee.csv")
+library("writexl")
+library(RODBC)
+#聯結CRM資料庫192.168.0.245
+channel <- odbcConnect("CRM", uid="sa", pwd="gdcrm")
+#                     Leads.CompanyID AS'CompanyID',
+#                     TrackingRecord.SalesID AS 'SalesID',
+#                     Employee.EmplID AS 'EmplID',
+df <- sqlQuery(channel, "SELECT 
+                     TrackingRecord.RecordDate AS 'RecordDate',
+                     Company.CoShortName AS 'CoShortName',
+                     Employee.DisplayName AS 'DisplayName',
+                     Leads.LeadID AS 'LeadID', 
+                     Leads.LeadName AS 'LeadName',
+                     Leads.OpenDate AS 'OpenDate',
+                     Leads.WorkRecordCount AS 'WorkRecordCount',
+                     Leads.SpentHours As 'SpentHours',
+                     TrackingRecord.WorkDescription AS 'WorkDescription'
+                     FROM Leads,                                                         
+                          Company,
+                          Employee,
+                          TrackingRecord
+                     WHERE Leads.CompanyID=Company.CompanyID AND
+                           TrackingRecord.LeadID=Leads.LeadID AND
+                           TrackingRecord.SalesID=Employee.EmplID AND
+                           (TrackingRecord.RecordDate>={ts '2021-01-01 00:00:00'} 
+                            And TrackingRecord.RecordDate<={ts '2021-06-04 00:00:00'})
+                    ")
+summary(df) 
+close(channel)
+write_xlsx(df,"D:/ElvisData/Bigdata/CRM20210604.xlsx")
+#聯結CRM客制化出貨資料表
+#df <- sqlQuery(channel, "SELECT * FROM U_ERPShip")
+#class(df)
+#names(df)
+#head(df,n=3)
+#df10 <- sqlQuery(channel, "SELECT SalesID, TaxNumber, ShipDate,
+#                 CompanyName FROM U_ERPShip  
+#                  WHERE  ShipDate = '2014-01-02 00:00:00' "
+#                 )
+#WHERE ShipDate BETWEEN '2017-01-01 00:00:00' AND '2017-12-31 00:00:00'
+df11 <- sqlQuery(channel, "SELECT SalesID, TaxNumber, ShipDate,Amount,
+                 CompanyName FROM U_ERPShip  
+                 WHERE ShipDate BETWEEN '2017-01-01 00:00:00' AND '2017-12-31 00:00:00' "
+)
+
+df7 <- sqlQuery(channel, "SELECT DBName,
+                CompanyName,
+                TaxNumber,
+                SalesID,
+                SalesName,
+                ShipDate,
+                ProductID,
+                Qty,
+                Amount
+                FROM U_ERPShip  
+                WHERE ShipDate BETWEEN '2017-01-01 00:00:00' AND '2017-07-25 00:00:00' "
+)
+
+write.csv(df7, "ERPShip201707.csv")
+write.csv(df11, "ERPShip201712.csv")
+
+close(channel)
+
+require(plyr)
+#適用2014年10月年度計劃DABC
+#把Cname改為CustomerName進行合併
+Shipbycust <- ddply(df7,.(SalesID, CompanyName),summarise,
+                    Total = sum(Amount))
+Shipbycust <- subset(df7, select= c(SalesID, CompanyName,ShipDate,Amount))
+
+Shipbysales <- df7
+
+write.csv(Shipbycust, "ERPShip201707bycust.csv")
+
+#crmdf <- sqlQuery(channel, "SELECT * FROM U_LeadsForecast")
+lead <- sqlQuery(channel, "SELECT * FROM Leads")
+company <- sqlQuery(channel, "SELECT * FROM Company")
+department <- sqlQuery(channel, "SELECT * FROM Department")
+#crmdf3 <- sqlQuery(channel, "SELECT * FROM U_LeadsForecast",
+#"WHERE substr(ForecastDate, start=1, stop=4)  
+#                  = '2017' ")
+crmdf6 <- sqlQuery(channel, "SELECT * FROM U_LeadsForecast 
+                   WHERE ForecastDate BETWEEN '2017-08-01' 
+                   AND '2017-09-30' ")
+
+crmdf6 <- subset(crmdf6, select = c(LeadID,ForecastDate,ProductID,StageID,Qty,SellingPrice))
+
+
+crmdf6c <- merge(crmdf6,lead,by ="LeadID",all.crmdf6 = T)
+
+crmdf6c <- subset(crmdf6c, select = c(LeadID,ForecastDate,ProductID,StageID,Qty,SellingPrice,LeadName,DeptID,SalesID))
+crmdf6e <- merge(crmdf6c,fwtemp,by ="SalesID",all.crmdf6c = T)
+crmdf6e <- subset(crmdf6e, select = c(LeadID,ForecastDate,ProductID,StageID.x,Qty,SellingPrice,LeadName,DeptID.x,SalesID,DisplayName,Account))
+
+# rename DepID.x to DepID
+library(data.table)
+setnames(crmdf6e, "DeptID.x", "DeptID")
+setnames(crmdf6e, "StageID.x", "StageID")
+crmdf6d <- merge(crmdf6e,department,by ="DeptID",all.crmdf6e = T)
+crmdf6d <- subset(crmdf6d, select = c(LeadID,ForecastDate,ProductID,StageID,Qty,SellingPrice,LeadName,DeptID,DeptNameCHT,SalesID,DisplayName,Account))
+crmdf6d$Amount <- crmdf6d$SellingPrice*crmdf6d$Qty
+crmdf6d$YYMM <- substr(crmdf6d$ForecastDate, start=1, stop=7) ## Year and Month
+crmdf6d <- subset(crmdf6d, select = c(DeptID,DeptNameCHT,SalesID,DisplayName,LeadID,LeadName,ProductID,ForecastDate,YYMM,StageID,Qty,SellingPrice,Amount))
+crmdf6dsz <- subset(crmdf6d,DeptID=="C2100")
+crmdf6dsh <- subset(crmdf6d,DeptID=="C3120")
+crmdf6dtp <- subset(crmdf6d,DeptID=="T1100")
+write.csv(crmdf6dsz, "crmdabcC2100深圳辦事處.csv")
+write.csv(crmdf6dsh, "crmdabcC3120上海業務部.csv")
+write.csv(crmdf6dtp, "crmdabcT1100業務部.csv")
+#crmdf2s <- subset(crmdf2, substr(crmdf2$ForecastDate, start=1, stop=7)  
+#                  == '2017-05')
+
+write.csv(crmdf2s, "crmdf2s.csv")
+class(crmdf)
+names(crmdf)
+str(crmdf)
+#兆崴出貨資料表
+fwtdf <- sqlQuery(channel, "SELECT * FROM U_ERP_CINV")
+class(fwtdf)
+names(fwtdf)
+head(fwtdf,n=3)
+
+#library(plyr)
+
+#make sure that  Id cols are both type numeric
+#they ARE not using the provided code in question and dplyr will complain
+fwtemp$SalesID <- as.numeric(fwtemp$EmplID)
+df$EmplID <- df$SalesID
+Shipbycust$EmplID <- Shipbycust$SalesID 
+df11$EmplID <- df11$SalesID
+#left outer
+#library(dplyr)
+#dftoemp <- left_join(df, fwtemp)
+#dfdata <- data.frame(df11)
+dfdata <- data.frame(Shipbycust) #出貨依客顧加總後之檔案
+empdata <- data.frame(fwtemp)
+dftoemp <- merge(dfdata,empdata,by ="SalesID",all.dfdata = T)
+Shipbysales <- subset(dftoemp, select = c(SalesID, DisplayName, Account, CompanyName, ShipDate, Amount))
+
+Shipbysales$ShipYY <- substr(Shipbysales$ShipDate, start=1, stop=4) ## Year
+Shipbysales$ShipYYMM <- substr(Shipbysales$ShipDate, start=1, stop=7) ## Year and Month
+Shipbysales$ShipDate <- substr(Shipbysales$ShipDate, start=1, stop=10) ## Year Month Day
+Shipbysales$Cname <- substr(Shipbysales$CompanyName, start=1, stop=4) ## 公司名取四個字
+Shipbysales$Sname <- substr(Shipbysales$SalesName, start=1, stop=3) ## 業務名取三個字
+
+write.csv(Shipbysales, "Ship2010-17bysales.csv")
+
+write.csv(dftoemp, "ERPShip201705sales.csv")
+df2temp <- merge(dfdata, empdata, by.x="SalesID", by.y = "EmplID")
+#以dfdata為主合併empdata
+df3oemp <- merge(dfdata,empdata,by ="SalesID", all.x =TRUE)
+#以empdata為主合併dfdata
+df4oemp <- merge(dfdata,empdata,by ="SalesID", all.y =TRUE)
+#取聯集全部保留
+df5oemp <- merge(dfdata,empdata,by ="SalesID", all=TRUE)
+library(plyr)
+df6temp <- join(dfdata, empdata, by="SalesID", type="inner")
+
+install.packages("Rcmdr",dependencies=TRUE)
+library(Rcmdr) 
+#資料屬性查詢函數
+#資料屬性可透過下列函數查詢:
+#名稱 names()
+#各維度名稱 dimnames()
+#長度 length()
+#各維度長度 dim()
+#資料型態 class()
+#各類資料計數 table()
+#總覽資料 str()
+ls.str(df)
+class(df$ShipDate)  #出貨日期為factor, 須轉為character
+i <- sapply(df, is.factor)
+df[i] <- lapply(df[i], as.character)
+df$NewShipDate <- substr(df$ShipDate, start=1, stop=10) 
+# sort by NewShipDate
+dfnew <- df[order(df$NewShipDate),] 
+# select variables NewShipDate SalesID SalesName TaxNumber CompanyName ProductID Qty Amount
+myvars <- c("NewShipDate", "SalesID", "SalesName","TaxNumber","CompanyName","ProductID","Qty","Amount")
+dfnew <- dfnew[myvars]
+dfnew$year <- substr(dfnew$NewShipDate, start=1, stop=4)
+dfnew$month <-substr(dfnew$NewShipDate, start=6, stop=7)
+dfnew2017 <- subset(dfnew, dfnew$year=="2017")
+#匯出CSV檔
+write.csv(dfnew2017, "ERPShip.csv")
+#測式客戶最近出貨日
+mydfq <- subset(dfnew2017, select = c(SalesName,CompanyName,Shipdate,Qty,Amount))
+#排序by Shipdate
+mydfd <- mydfq[rev(order(mydfq$Shipdate)),]
+#排序by CompanyName
+mydfd <- mydfd[order(mydfd$CompanyName),]
+#彙總by CompanyName+Shipdate
+#mydfd4 <- ddply(mydfd,.(CompanyName,Shipdate),summarise,Dqty = sum(Qty),Damt = sum(Amount),Recency = max(Shipdate))
+mydfd5 <- ddply(mydfd,.(SalesName,CompanyName,Shipdate),summarise,Dqty = sum(Qty),Damt = sum(Amount))
+
+
+#根據mydfd5, 統計每一家顧客的Qty, Amount, Recency, Frequency
+mydfd6 <- ddply(mydfd5,.(SalesName,CompanyName),summarise,Dqty = sum(Dqty),Damt = sum(Damt),Recency = max(Shipdate),Frequency=length(Shipdate))
+
+mydfd6$RankR <- cut(mydfd6$Recency, 5,labels=F)  #rankR 1 is very recent while rankR 5 is least recent
+mydfd6$RankF <- cut(mydfd6$Frequency, 5,labels=F) #rankF 1 is least frequent while rankF 5 is most frequent
+#mydfd6$RankM <- cut(mydfd6$Dqty, 5,labels=F) #rankM 1 is lowest sales while rankM 5 is highest sales
+#mydfq7 <- subset(mydfd6, select = c(SalesName,CompanyName,Dqty,Damt,Frequency,Recency))
+mydfd6$TenAmt <- mydfd6$Damt/10000
+mydfd6$TenAmt_sqrt <- sqrt(mydfd6$TenAmt)
+mydfd6$RankM <- cut(mydfd6$TenAmt, breaks = 5,labels=F)
+mydfd6$RankM_sqrt <- cut(mydfd6$TenAmt_sqrt, breaks = 5,labels=F)
+#table(mydfd6[,7:8])
+table(mydfd6[,c(7,8)]) #RankR vs RankF
+table(mydfd6[,c(7,12)]) #RankR vs RankM
+table(mydfd6[,c(8,12)]) #RankF vs RankM
+write.csv(mydfd6, "D:/Bigdata/mydfq6.csv")
+
+
+#使用RFM package 開始
+library(didrooRFM)
+#取出公司名, 出貨日, 出貨金額
+mydfd5 <- ddply(mydfd,.(SalesName,CompanyName,Shipdate),summarise,Dqty = sum(Qty),Damt = sum(Amount))
+mydfd9 <- subset(mydfd5, select=c(CompanyName, Shipdate,Damt))
+View(mydfd9)
+#重新整理序?
+rownames(mydfd9) <- 1:nrow(mydfd9)
+#新增交易序?
+mydfd9$TranId <- rownames(mydfd9)
+#轉換出貨日期格式
+mydfd9 <- mutate(mydfd9,Shipdate=as.Date(Shipdate,"%m/%d/%Y"))
+#重排欄位順序
+mydfd99 <- mydfd9[c(4,1,2,3)]
+#執行didrooRFM中的finRFM function
+rfm <-findRFM(mydfd99)
+#查看執行結果
+View(rfm)
+write.csv(rfm, "D:/Bigdata/RFM.csv")
+#使用RFM package 結束
+
+#mydfd7 <- ddply(mydfd,.(CompanyName),summarise,Dqty = sum(Qty),Damt = sum(Amount),Freqency=length(Shipdate))
+ls.str(df)
+#ShipDate SalesID SalesName TaxNumber CompanyName ProductID Qty Amount
+edit(df)
+table(df$ProductID)
+mean(df$Amount)
+
+library("sqldf")
+
+# close connection
+odbcClose(channel)
+# end

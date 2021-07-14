@@ -1,0 +1,272 @@
+#20180720利用ODBC直接聯結到台北大帳省ERP出貨資料
+#使用odbc32.exe
+#C:\Windows\SysWOW64\odbc32.exe
+#控制台\所有控制台項目\系統管理工具\odbc32.exe
+#DSN名稱:N_ERP
+#描述(D):英創
+#伺服器(S):192.168.0.99
+#SQL Server應如何確認登入識別的真確性? 勾選由使用者所輸入識別碼及密碼進行SQL Server帳戶驗證
+#登入識別碼(L):sa
+#密碼(P):intron
+#變更預設資料庫為(D):ICompany13或ICompnay8
+#其它步驟均按確認鍵
+#Talbes: Card 單據/客戶/業務基本資料
+#        Pact 出貨單
+#        Ship出貨單頭業務代表/匯率
+#        Subship出貨單身或明細
+#        Vary出貨原弊金額
+#Pact.actDate銷貨日期=date
+#Card.name客戶名稱=client
+#SubShip.name出貨料號=partno
+#vary.amountUI*ship.moneyDB銷貨金額=samt
+#Vary.cost單價=Runitprice
+#vary.vol*vary.cost*-1 銷貨成本=scost
+#Ship.agent業務代號=saleno
+#Card_1.name 業務姓名=salesman
+#Vary.vol*-1 出貨數量=sqty
+#Ship.moneyDB 匯率
+#Vary.amountUI金額
+#Pact.actDate出貨日期
+#Pact.ui=30出貨單
+#Card.card=業務代號
+#Card.name=客戶代號=client
+#Pact.ui=30
+#Pact.actDate=>=#2018/6/1# And <=#2018/6/30#
+#date=Pact.actDate
+#vary.amountUI*ship.moneyDB
+#qty=Vary.vol*-1
+#Runiprice=Vary.cost
+#scost=vary.vol*vary.cost*-1
+
+install.packages("mvoutlier")
+install.packages("car")
+install.packages("Rserve")
+library(mvoutlier)
+library(Rserve)
+Rserve()
+#讀取目前工作資料夾路徑
+getwd()
+#設定工作資料夾路徑
+setwd("D:/ElvisData/Bigdata")
+
+#第一步設定數值顯示1,000,000而非1e+6
+options(scipen=3)
+#設定字型與大小
+temp <- tempfile()
+cat("points = 14\n", file = temp)
+cat("style = Lucida Console\n", file = temp, append = TRUE)
+loadRconsole(file = temp)
+## 恢復到預設字型與大小And then, to reset to the defaults:
+#loadRconsole(file = file.path(R.home(), "etc/Rconsole"))
+
+#查詢已在記憶體中的packages
+search()
+
+install.packages("dplyr")
+install.packages("sqldf")
+install.packages("RODBC")
+install.packages("plyr")
+install.packages("lubridate")
+install.packages("reshape2")
+library("sqldf")
+library("plyr")
+library("lubridate")
+
+library(RODBC)
+#聯結CRM資料庫192.168.0.245
+channel <- odbcConnect("CRM", uid="sa", pwd="gdcrm")
+
+#聯結台北大帳省透過ODBC32.exe建立N_ERP (sql server), 英創, id:sa password:intron
+#channel <- odbcConnect("N_ERP", uid="sa", pwd="intron")
+myconn <-odbcConnect("N_ERP", uid="sa", pwd="intron")
+Card.dat <- sqlFetch(myconn, "Card")
+Pact.dat <- sqlQuery(myconn, "select * from Pact")
+Ship.dat <- sqlFetch(myconn, "Ship")
+Subship.dat <- sqlFetch(myconn, "Subship")
+Vary.dat <- sqlFetch(myconn, "Vary")
+close(myconn)
+Card2.dat <- Card.dat
+
+card2 <- subset(Card2.dat, select= c(card,name))
+card <- subset(Card.dat, select= c(card,name))
+card2$agent <- card$card
+
+
+pact <- subset(Pact.dat, select= c(pact, actDate, ui))
+ship <- subset(Ship.dat, select= c(pact, who, agent, moneyDB))
+subship <- subset(Subship.dat, select= c(vary, volUI, name))
+vary <- subset(Vary.dat, select= c(vary, pact, amountUI, vol, cost))
+
+pactship <- merge(pact,ship,by="pact")
+pactshipc <- merge(x=card, y=pactship, by.x="card", by.y="who")
+pactshipcs <- merge(card2, pactshipc, by="agent")
+pactshipcsv <- merge(vary, pactshipcs, by="pact")
+pactshipcsvs <- merge(subship, pactshipcsv, by="vary")
+# reorder by column name
+pactshipcsvs <- pactshipcsvs[c("actDate", "card.y", "name.y", 
+                               "name", "amountUI", "moneyDB", "vol", "cost",
+                               "card.x","agent","name.x", "vary", "volUI","pact","ui")]
+thisyear <- subset(pactshipcsvs, actDate > "2018-05-01" & actDate < "2018-05-31")
+thisyear1 <- subset(pactshipcsvs, pactshipcsvs$ui > 29 & actDate > "2018-01-01" & actDate < "2018-12-31")
+write.csv(thisyear1, "D:/ElvisData/Bigdata/ERPTP2018full.csv")
+write.csv(Card.dat, "D:/ElvisData/Bigdata/ERPTPcard.csv")
+
+library(RODBC)
+myconn <- odbcConnect('my corporate datasource')
+customers <- sqlQuery(myconn, "select cust_id as cust, 
+                      count(sales) as num_sales,
+                      sum(sales) as tot_sales
+                      from invoices 
+                      group by cust_id")
+summary(customers)
+#https://blog.aptitive.com/sourcing-data-from-a-sql-database-into-r-94c0f6ca1663
+
+
+##### This is a simple RODBC example
+##### The ODBCDriverName will be the driver name in ODBC Administrator
+install.packages("writexl")
+library("writexl")
+require(RODBC)
+#20180720測試:連結大帳省ERP資料庫
+#除了上面用merge方式取得ERP出貨資料, 亦可直接使用sql語法直接讀取出貨資料
+#open the ODBC connection
+ch <- odbcConnect("N_ERP",uid="sa",pwd="intron")
+#
+custdata <- sqlQuery(ch, "SELECT 
+                     
+         no, name, shortcut, nameE, shortcutE FROM ICompany8.dbo.Card Card")
+custall <- sqlQuery(ch, "SELECT 
+                          * FROM ICompany8.dbo.Card Card")
+##產生ERP客戶清單
+#write_xlsx(custdata,"D:/ElvisData/Bigdata/CUST202012.xlsx")
+write_xlsx(custdata,"D:/ElvisData/Bigdata/CUST20210604.xlsx")
+odbcClose(ch)
+#ch <- odbcConnect("N_ERP",uid="sa",pwd="intron", DBMSencoding = "UTF-8", readOnlyOptimize=T)
+
+##### Alternative ODBC connection for Microsoft SQL #Server
+#ch <- odbcDriverConnect(
+#  "Driver=SQL Server; Server=servername\\instance; #Database=databasename; UID=username; Pwd=password"
+#)
+
+##Connection <- odbcConnect("abc", uid = "123", pwd = "123", DBMSencoding = "UTF-8", readOnlyOptimize=T)
+
+#run the query, store in a data frame
+######################
+library("writexl")
+require(RODBC)
+#20180720測試:連結大帳省ERP資料庫
+#除了上面用merge方式取得ERP出貨資料, 亦可直接使用sql語法直接讀取出貨資料
+#open the ODBC connection
+ch <- odbcConnect("N_ERP",uid="sa",pwd="intron")
+#台北的資料庫為Icompany8
+sqlResult <- sqlQuery(ch, "SELECT 
+                     Pact.actDate AS 'shipdate',
+                     Card.no As 'ClientNo',
+                     Card.name AS 'client', 
+                     SubShip.name AS 'partno', 
+                     vary.amountUI*ship.moneyDB AS 'samt', 
+                     Vary.vol*-1 AS 'sqty', 
+                     Vary.cost AS 'Runitprice', 
+                     vary.vol*vary.cost*-1 AS 'scost', 
+                     Ship.agent AS 'salesno', 
+                     Card_1.name AS 'salesman'  
+                     FROM ICompany8.dbo.Card Card,                                         ICompany8.dbo.Card Card_1, 
+                     ICompany8.dbo.Pact Pact, 
+                     ICompany8.dbo.Ship Ship, 
+                     ICompany8.dbo.SubShip SubShip,                                        ICompany8.dbo.Vary Vary  
+                     WHERE Ship.pact = Pact.pact AND                                       Vary.vary = SubShip.vary AND 
+                     Vary.pact = Pact.pact AND 
+                     Card.card = Ship.who AND 
+                     Ship.agent = Card_1.card 
+                     AND ((Card.kind=-1) AND 
+                     (Pact.ui=30) AND 
+                     (Pact.actDate>={ts '2021-01-01 00:00:00'} 
+                      And Pact.actDate<={ts '2021-07-13 00:00:00'}))")
+
+#write.csv(sqlResult, "D:/Bigdata/ERPTP2018d.csv")
+
+#讀取HK資料庫Icompany13
+sqlResult13 <- sqlQuery(ch, "SELECT Pact.actDate AS 'shipdate', 
+                        Card.no As 'ClientNo',
+                        Card.name AS 'client', 
+                        SubShip.name AS 'partno', 
+                        vary.amountUI*ship.moneyDB AS 'samt', 
+                        Vary.vol*-1 AS 'sqty', 
+                        Vary.cost AS 'Runitprice', 
+                        vary.vol*vary.cost*-1 AS 'scost', 
+                        Ship.agent AS 'salesno', 
+                        Card_1.name AS 'salesman'  
+                        FROM ICompany13.dbo.Card Card, 
+                        ICompany13.dbo.Card Card_1, 
+                        ICompany13.dbo.Pact Pact, 
+                        ICompany13.dbo.Ship Ship, 
+                        ICompany13.dbo.SubShip SubShip, 
+                        ICompany13.dbo.Vary Vary  
+                        WHERE Ship.pact = Pact.pact AND 
+                        Vary.vary = SubShip.vary AND 
+                        Vary.pact = Pact.pact AND 
+                        Card.card = Ship.who AND 
+                        Ship.agent = Card_1.card AND 
+                        ((Card.kind=-1) AND (Pact.ui=30) AND 
+                        (Pact.actDate>={ts '2021-01-01 00:00:00'} And                        
+                         Pact.actDate<={ts '2021-07-13 00:00:00'}))")
+
+write.csv(sqlResult13, "D:/ElvisData/Bigdata/ERPHK20210713.csv")
+
+sqlResultall <- rbind(sqlResult, sqlResult13)
+sqlResultall7 <- subset(sqlResultall, sqlResultall$shipdate >='2021-07-01 00:00:00')
+#Transform ClientNo from factor into character
+sqlResultall$ClientNo <- as.character(sqlResultall$ClientNo)
+#write.csv(sqlResultall, "D:/ElvisData/Bigdata/ERPTP201401-201806.csv")
+#write.csv(sqlResultall, "D:/ElvisData/Bigdata/ERPTP201801-201906.csv")
+#write.csv(sqlResultall, "D:/ElvisData/Bigdata/ERPTP201801-201907.csv")
+#write.csv(sqlResultall, "D:/ElvisData/Bigdata/ERPTP201901-11.csv")
+#write.csv(sqlResultall, "D:/ElvisData/Bigdata/ERPTP2018-202004A.csv")
+#close the ODBC connection
+#利用Write_xlsx解決客戶編號轉文字檔時, 部份資料格式錯誤
+#write_xlsx(sqlResultall,"D:/ElvisData/Bigdata/ERPTP2021.xlsx")
+#write_xlsx(sqlResultall7,"D:/ElvisData/Bigdata/ERPTP202107.xlsx")
+odbcClose(ch)
+
+#sqlResultall$ShipYY <- year(sqlResultall$shipdate)
+#sqlResultall$ShipMM <- month(sqlResultall$shipdate)
+#totaloutput <- round(sum(sqlResultall$samt) / 10000 )
+#totaloutput7 <- round(sum(sqlResultall7$samt) / 10000 )
+#nkg_all <- subset(sqlResultall,ClientNo=="27580987-1")
+#sqlResultall$ShipYYMM <- substr(sqlResultall$ShipDate, start=1, stop=7) ## Year and Month
+# Saving on object in RData format
+# C:/Users/elvis/Documents/fwt_reports
+save(sqlResultall, file = "C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+# Save multiple objects
+#save(data1, data2, file = "data.RData")
+save(sqlResultall,sqlResultall7,  file = "C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+# To load the data again
+#load("C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+######################
+
+#Link CRM Database
+channel <- odbcConnect("CRM", uid="sa", pwd="gdcrm")
+Dreport <- sqlQuery(channel, "Select RecordDate, 
+                                         SalesID, 
+                                         CompanyID, 
+                                         WorkDescription 
+                                  From   TrackingRecord
+                                  WHERE  RecordDate BETWEEN 
+                                        '2020-01-01 00:00:00' AND '2020-08-07 00:00:00'
+                        ")
+#Report <- sqlFetch(channel, "TrackingRecord")
+Lead <-  sqlQuery(channel, "Select LeadID,
+                                  LeadName,
+                                  CompanyID,
+                                  SalesID,
+                                  LastWorkDescription
+                           From   Leads
+                           WHERE  CreateDate BETWEEN 
+        '2020-01-01 00:00:00' AND '2020-08-07 00:00:00'
+                          ")
+Sales <-sqlQuery(channel,"select EmplID, DisplayName from Employee")
+write_xlsx(Lead,"D:/ElvisData/Bigdata/CRM-lead202001-08.xlsx")
+close(channel)
+
+Sales$SalesID <-  as.numeric(as.character(Sales$EmplID))
+MData <- merge(Dailyreport,Sales,by ="SalesID",all.Dailyreport = T)

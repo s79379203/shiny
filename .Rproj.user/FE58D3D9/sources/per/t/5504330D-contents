@@ -1,0 +1,69 @@
+---
+title: "TPS Report"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+library(plotly)
+library(ggplot2)
+library(shiny)
+library(dplyr)
+```
+
+# Start
+
+## Column {data-width=500, .tabset}
+
+### Chart A
+
+```{r}
+chartA
+```
+
+### Chart A2
+
+```{r}
+chartA2
+```
+
+### Chart A3
+
+```{r}
+
+```
+Column {data-width=250}
+-----------------------------------------------------------------------
+
+### ValueBox
+
+```{r}
+valueBox(dim(mydata)[1], icon = "fa-pencil")
+```
+
+### Chart C
+
+```{r}
+gauge(23, min=0, max=100,
+      gaugeSectors(success = c(90,100),
+                   warning = c(50,89),
+                   danger = c(0,49)))
+```
+Column {data-width=250}
+-----------------------------------------------------------------------
+
+### Chart D
+
+Hello, this is my report. Btw, I can change colors.
+<font color="red">Hello Red Font</font>
+
+# Expert
+
+```{r}
+datatable(mydata)
+```
+
