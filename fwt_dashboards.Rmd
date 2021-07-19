@@ -16,12 +16,6 @@ library(DT)
 
 ```{r data}
 
-#data <- read.csv("C:/Users/elvis/Documents/fwt_reports/BankChurners.csv")
-
-#Categorical.Variables = c("Gender", "Education_Level", "Marital_Status")
-
-#Numeric.Variables = c("Customer_Age", "Total_Trans_Ct", "Credit_Limit")
-
 load("C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
 
 ```
@@ -43,6 +37,24 @@ valueBox(totaloutput <- round(sum(sqlResultall$samt) / 10000))
 valueBox(round(totaloutput/6))
 ```
 
+### 毛利率
+```{r}
+#totalcost <- round(sum(sqlResultall$scost) / 10000)
+#valueBox((totaloutput-totalcost) / totaloutput)
+totaloutput <- round(sum(sqlResultall$samt) / 10000)
+totalcost <- round(sum(sqlResultall$scost) / 10000)
+totalprofit <- totaloutput - totalcost
+
+
+rate <- formatC(totalprofit / totaloutput, digits = 2, format = "f")
+valueBox(
+    value = rate,
+    icon = "fa-area-chart",
+    color = if (rate < 0.2) "warning" else "primary"
+  )
+
+```
+
 Row
 -----------------------------------------------------------------------
 ### NKG集團總出貨金額 (單位:萬元)  {.value-box}
@@ -51,14 +63,31 @@ Row
 #ClientNo=="27580987-1"
 #ClientNo=="27580987-4"
 #ClientNo=="27580987-5"
-nkg_all <- subset(sqlResultall,ClientNo=="04370927" |
+nkg_allA <- subset(sqlResultall,ClientNo=="04370927" |
                     ClientNo=="27580987-1" |
                     ClientNo=="27580987-4" |
                     ClientNo=="27580987-5")
-valueBox(nkgoutput <- round(sum(nkg_all$samt) / 10000))
+valueBox(nkgoutputall <- round(sum(nkg_allA$samt) / 10000))
 ```
 
-### CAL-COMP出貨金額 (單位:萬元)
+### NKG毛利率
+```{r}
+#totalcost <- round(sum(sqlResultall$scost) / 10000)
+#valueBox((totaloutput-totalcost) / totaloutput)
+nkgoutputall <- round(sum(nkg_allA$samt) / 10000)
+nkgcostall <- round(sum(nkg_allA$scost) / 10000)
+nkgprofitall <- nkgoutputall - nkgcostall
+
+nkgrate <- formatC( nkgprofitall / nkgoutputall, digits = 2, format = "f")
+valueBox(
+    value = nkgrate,
+    icon = "fa-area-chart",
+    color = if (nkgrate < 0.2) "warning" else "primary"
+  )
+
+```
+
+### CALCOMP(泰國)出貨金額 (單位:萬元)
 ```{r}
 #27580987-1 CAL-COMP
 #04370927 金寶電子
@@ -82,7 +111,7 @@ nkg_allD <- subset(sqlResultall,ClientNo=="27580987-5")
 valueBox(nkgoutputD <- round(sum(nkg_allD$samt) / 10000))
 ```
 
-### 金寶電子出貨金額 (單位:萬元)
+### 金寶電子(長安)出貨金額 (單位:萬元)
 ```{r}
 #27580987-1 CAL-COMP
 #04370927 金寶電子
@@ -152,7 +181,7 @@ nkg_all <- subset(sqlResultall7,ClientNo=="04370927" |
 valueBox(nkgoutput <- round(sum(nkg_all$samt) / 10000))
 ```
 
-### CAL-COMP出貨金額 (單位:萬元)
+### CALCOMP(泰國)出貨金額 (單位:萬元)
 ```{r}
 #27580987-1 CAL-COMP
 #04370927 金寶電子
@@ -176,7 +205,7 @@ nkg_allD <- subset(sqlResultall7,ClientNo=="27580987-5")
 valueBox(nkgoutputD <- round(sum(nkg_allD$samt) / 10000))
 ```
 
-### 金寶電子出貨金額 (單位:萬元)
+### 金寶電子(長安)出貨金額 (單位:萬元)
 ```{r}
 #27580987-1 CAL-COMP
 #04370927 金寶電子
