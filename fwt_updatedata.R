@@ -67,7 +67,139 @@ sqlResultall7 <- subset(sqlResultall, sqlResultall$shipdate >='2021-07-01 00:00:
 # close the ODBC connection
 odbcClose(ch)
 # To save the objects (sqlResultall,sqlResultall7) to a RData file
-save(sqlResultall,sqlResultall7,  file = "C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+#save(sqlResultall,sqlResultall7,  file = "C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
+
+
+
+######################
+require(RODBC)
+#20180720測試:連結大帳省ERP資料庫
+#除了上面用merge方式取得ERP出貨資料, 亦可直接使用sql語法直接讀取出貨資料
+#open the ODBC connection
+ch <- odbcConnect("N_ERP",uid="sa",pwd="intron")
+#讀取2020年台北的資料庫Icompany8
+sqlResult <- sqlQuery(ch, "SELECT 
+                     Pact.actDate AS 'shipdate',
+                     Card.no As 'ClientNo',
+                     Card.name AS 'client', 
+                     SubShip.name AS 'partno', 
+                     vary.amountUI*ship.moneyDB AS 'samt', 
+                     Vary.vol*-1 AS 'sqty', 
+                     Vary.cost AS 'Runitprice', 
+                     vary.vol*vary.cost*-1 AS 'scost', 
+                     Ship.agent AS 'salesno', 
+                     Card_1.name AS 'salesman'  
+                     FROM ICompany8.dbo.Card Card,                                         ICompany8.dbo.Card Card_1, 
+                     ICompany8.dbo.Pact Pact, 
+                     ICompany8.dbo.Ship Ship, 
+                     ICompany8.dbo.SubShip SubShip,                                        ICompany8.dbo.Vary Vary  
+                     WHERE Ship.pact = Pact.pact AND                                       Vary.vary = SubShip.vary AND 
+                     Vary.pact = Pact.pact AND 
+                     Card.card = Ship.who AND 
+                     Ship.agent = Card_1.card 
+                     AND ((Card.kind=-1) AND 
+                     (Pact.ui=30) AND 
+                     (Pact.actDate>={ts '2020-01-01 00:00:00'} 
+                      And Pact.actDate<={ts '2020-12-31 00:00:00'}))")
+
+#write.csv(sqlResult, "D:/Bigdata/ERPTP2018d.csv")
+
+#讀取2020年HK資料庫Icompany13
+sqlResult13 <- sqlQuery(ch, "SELECT Pact.actDate AS 'shipdate', 
+                        Card.no As 'ClientNo',
+                        Card.name AS 'client', 
+                        SubShip.name AS 'partno', 
+                        vary.amountUI*ship.moneyDB AS 'samt', 
+                        Vary.vol*-1 AS 'sqty', 
+                        Vary.cost AS 'Runitprice', 
+                        vary.vol*vary.cost*-1 AS 'scost', 
+                        Ship.agent AS 'salesno', 
+                        Card_1.name AS 'salesman'  
+                        FROM ICompany13.dbo.Card Card, 
+                        ICompany13.dbo.Card Card_1, 
+                        ICompany13.dbo.Pact Pact, 
+                        ICompany13.dbo.Ship Ship, 
+                        ICompany13.dbo.SubShip SubShip, 
+                        ICompany13.dbo.Vary Vary  
+                        WHERE Ship.pact = Pact.pact AND 
+                        Vary.vary = SubShip.vary AND 
+                        Vary.pact = Pact.pact AND 
+                        Card.card = Ship.who AND 
+                        Ship.agent = Card_1.card AND 
+                        ((Card.kind=-1) AND (Pact.ui=30) AND 
+                        (Pact.actDate>={ts '2020-01-01 00:00:00'} And                        
+                         Pact.actDate<={ts '2020-12-31 00:00:00'}))")
+
+
+sqlResultall2020 <- rbind(sqlResult, sqlResult13)
+
+odbcClose(ch)
+
+######################
+require(RODBC)
+#20180720測試:連結大帳省ERP資料庫
+#除了上面用merge方式取得ERP出貨資料, 亦可直接使用sql語法直接讀取出貨資料
+#open the ODBC connection
+ch <- odbcConnect("N_ERP",uid="sa",pwd="intron")
+#讀取2019年台北的資料庫Icompany8
+sqlResult <- sqlQuery(ch, "SELECT 
+                     Pact.actDate AS 'shipdate',
+                     Card.no As 'ClientNo',
+                     Card.name AS 'client', 
+                     SubShip.name AS 'partno', 
+                     vary.amountUI*ship.moneyDB AS 'samt', 
+                     Vary.vol*-1 AS 'sqty', 
+                     Vary.cost AS 'Runitprice', 
+                     vary.vol*vary.cost*-1 AS 'scost', 
+                     Ship.agent AS 'salesno', 
+                     Card_1.name AS 'salesman'  
+                     FROM ICompany8.dbo.Card Card,                                         ICompany8.dbo.Card Card_1, 
+                     ICompany8.dbo.Pact Pact, 
+                     ICompany8.dbo.Ship Ship, 
+                     ICompany8.dbo.SubShip SubShip,                                        ICompany8.dbo.Vary Vary  
+                     WHERE Ship.pact = Pact.pact AND                                       Vary.vary = SubShip.vary AND 
+                     Vary.pact = Pact.pact AND 
+                     Card.card = Ship.who AND 
+                     Ship.agent = Card_1.card 
+                     AND ((Card.kind=-1) AND 
+                     (Pact.ui=30) AND 
+                     (Pact.actDate>={ts '2019-01-01 00:00:00'} 
+                      And Pact.actDate<={ts '2019-12-30 00:00:00'}))")
+
+#write.csv(sqlResult, "D:/Bigdata/ERPTP2018d.csv")
+
+#讀取2020年HK資料庫Icompany13
+sqlResult13 <- sqlQuery(ch, "SELECT Pact.actDate AS 'shipdate', 
+                        Card.no As 'ClientNo',
+                        Card.name AS 'client', 
+                        SubShip.name AS 'partno', 
+                        vary.amountUI*ship.moneyDB AS 'samt', 
+                        Vary.vol*-1 AS 'sqty', 
+                        Vary.cost AS 'Runitprice', 
+                        vary.vol*vary.cost*-1 AS 'scost', 
+                        Ship.agent AS 'salesno', 
+                        Card_1.name AS 'salesman'  
+                        FROM ICompany13.dbo.Card Card, 
+                        ICompany13.dbo.Card Card_1, 
+                        ICompany13.dbo.Pact Pact, 
+                        ICompany13.dbo.Ship Ship, 
+                        ICompany13.dbo.SubShip SubShip, 
+                        ICompany13.dbo.Vary Vary  
+                        WHERE Ship.pact = Pact.pact AND 
+                        Vary.vary = SubShip.vary AND 
+                        Vary.pact = Pact.pact AND 
+                        Card.card = Ship.who AND 
+                        Ship.agent = Card_1.card AND 
+                        ((Card.kind=-1) AND (Pact.ui=30) AND 
+                        (Pact.actDate>={ts '2019-01-01 00:00:00'} And                        
+                         Pact.actDate<={ts '2019-12-31 00:00:00'}))")
+
+
+sqlResultall2019 <- rbind(sqlResult, sqlResult13)
+
+odbcClose(ch)
+
+save(sqlResultall,sqlResultall7,sqlResultall2020,sqlResultall2019, file = "C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
 # To load the data again
 #load("C:/Users/elvis/Documents/fwt_reports/fwtdata.RData")
 
